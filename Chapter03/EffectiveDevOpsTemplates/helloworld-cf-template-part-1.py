@@ -32,7 +32,7 @@ t.add_resource(ec2.SecurityGroup(
             IpProtocol="tcp",
             FromPort="22",
             ToPort="22",
-            CidrIp="0.0.0.0/0",
+            CidrIp="0.0.0.0/0",#모든 접속을 허용함!
         ),
         ec2.SecurityGroupRule(
             IpProtocol="tcp",

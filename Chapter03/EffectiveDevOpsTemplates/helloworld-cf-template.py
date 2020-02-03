@@ -15,6 +15,7 @@ from troposphere import (
 )
 
 ApplicationPort = "3000"
+#접속 허용할 ip를 해당 소스코드가 실행되는 pc로 제한함!
 PublicCidrIp = str(ip_network(get_ip()))
 
 t = Template()
@@ -57,7 +58,7 @@ ud = Base64(Join('\n', [
 
 t.add_resource(ec2.Instance(
     "instance",
-    ImageId="ami-cfe4b2b0",
+    ImageId="ami-0e4a253fb5f082688",
     InstanceType="t2.micro",
     SecurityGroups=[Ref("SecurityGroup")],
     KeyName=Ref("KeyPair"),
@@ -79,4 +80,4 @@ t.add_output(Output(
     ]),
 ))
 
-print t.to_json()
+print(t.to_json())
