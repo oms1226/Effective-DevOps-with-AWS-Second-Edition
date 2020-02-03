@@ -50,10 +50,13 @@ ud = Base64(Join('\n', [
     "wget http://bit.ly/2vVvT18 -O /etc/init/helloworld.conf",
     "start helloworld"
 ]))
-
+"""
+OK --> Amazon Linux AMI 2018.03.0 (HVM), SSD Volume Type - ami-0e4a253fb5f082688
+NK --> Amazon Linux 2 AMI (HVM), SSD Volume Type - ami-0bea7fd38fabe821a
+"""
 t.add_resource(ec2.Instance(
     "instance",
-    ImageId="ami-cfe4b2b0",
+    ImageId="ami-0e4a253fb5f082688",
     InstanceType="t2.micro",
     SecurityGroups=[Ref("SecurityGroup")],
     KeyName=Ref("KeyPair"),
@@ -75,4 +78,4 @@ t.add_output(Output(
     ]),
 ))
 
-print t.to_json()
+print(t.to_json())
