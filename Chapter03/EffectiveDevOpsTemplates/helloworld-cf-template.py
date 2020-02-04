@@ -53,11 +53,12 @@ ud = Base64(Join('\n', [
 #    "sudo yum install --enablerepo=epel -y nodejs",
     "sudo yum install -y gcc-c++ make",
     "curl -sL https://rpm.nodesource.com/setup_13.x | sudo -E bash -",
-    "sudo yum install -y nodejs",
+    "sudo yum install -y nodejs npm",
     "wget http://bit.ly/2vESNuc -O /home/ec2-user/helloworld.js",
 #    "wget http://bit.ly/2vVvT18 -O /etc/init/helloworld.conf",
 #    "start helloworld"
-    "nohup node ./helloworld.js > /dev/null 2>&1 &"
+    "sudo npm install forever -g",
+    "forever start /home/ec2-user/helloworld.js"
 ]))
 
 t.add_resource(ec2.Instance(
