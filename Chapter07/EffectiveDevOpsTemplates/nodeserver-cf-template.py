@@ -206,7 +206,7 @@ t.add_resource(IAMPolicy(
 t.add_resource(LaunchConfiguration(
     "LaunchConfiguration",
     UserData=ud,
-    ImageId="ami-a4c7edb2",
+	ImageId="ami-0e4a253fb5f082688",
     KeyName=Ref("KeyPair"),
     SecurityGroups=[Ref("SecurityGroup")],
     InstanceType=Ref("InstanceType"),
@@ -285,4 +285,4 @@ t.add_output(Output(
     ]),
 ))
 
-print t.to_json()
+print (t.to_json())
