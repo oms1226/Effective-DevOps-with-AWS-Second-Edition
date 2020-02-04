@@ -193,7 +193,7 @@ t.add_resource(InstanceProfile(
 ))
 
 #아래 instance 생성 및 관련 부분 제거
-...
+'''
 t.add_resource(ec2.Instance(
     "instance",
 	ImageId="ami-0e4a253fb5f082688",
