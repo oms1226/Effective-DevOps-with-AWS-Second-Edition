@@ -12,6 +12,7 @@ from troposphere import (
     Parameter,
     Ref,
     Template,
+    elasticloadbalancing as elb,#elb 추가
 )
 
 from troposphere.iam import (
@@ -26,6 +27,13 @@ from awacs.aws import (
     Policy,
     Principal,
     Statement,
+)
+
+#autoscaling 기능 추가
+from troposphere.autoscaling import (
+    AutoScalingGroup,
+    LaunchConfiguration,
+    ScalingPolicy,
 )
 
 from awacs.sts import AssumeRole
@@ -55,6 +63,42 @@ t.add_parameter(Parameter(
     ConstraintDescription="must be the name of an existing EC2 KeyPair.",
 ))
 
+#VPC 선언
+t.add_parameter(Parameter(
+    "VpcId",
+    Type="AWS::EC2::VPC::Id",
+    Description="VPC"
+))
+
+#Subnet 선택
+t.add_parameter(Parameter(
+    "PublicSubnet",
+    Description="PublicSubnet",
+    Type="List<AWS::EC2::Subnet::Id>",
+    ConstraintDescription="PublicSubnet"
+))
+#몇개의 인스턴스로 할것인지 결정
+t.add_parameter(Parameter(
+    "ScaleCapacity",
+    Default="3",
+    Type="String",
+    Description="Number servers to run",
+))
+#생성 가능한 InstanceType 선언
+t.add_parameter(Parameter(
+    'InstanceType',
+    Type='String',
+    Description='WebServer EC2 instance type',
+    Default='t2.micro',
+    AllowedValues=[
+        't2.micro',
+        't2.small',
+        't2.medium',
+        't2.large',
+    ],
+    ConstraintDescription='must be a valid EC2 T2 instance type.',
+))
+
 t.add_resource(ec2.SecurityGroup(
     "SecurityGroup",
     GroupDescription="Allow SSH and TCP/{} access".format(ApplicationPort),
@@ -72,6 +116,53 @@ t.add_resource(ec2.SecurityGroup(
             CidrIp="0.0.0.0/0",
         ),
     ],
+	#elb에서 추가한 보안그룹을 참조하도록 추가
+    VpcId=Ref("VpcId"),
+))
+#elb 보안그룹 추가
+t.add_resource(ec2.SecurityGroup(
+    "LoadBalancerSecurityGroup",
+    GroupDescription="Web load balancer security group.",
+    VpcId=Ref("VpcId"),
+    SecurityGroupIngress=[
+        ec2.SecurityGroupRule(
+            IpProtocol="tcp",
+            FromPort="3000",
+            ToPort="3000",
+            CidrIp="0.0.0.0/0",
+        ),
+    ],
+))
+#elb 리소스 추가
+t.add_resource(elb.LoadBalancer(
+    "LoadBalancer",
+    Scheme="internet-facing",
+	
+	#redirect
+    Listeners=[
+        elb.Listener(
+            LoadBalancerPort="3000",
+            InstancePort="3000",
+            Protocol="HTTP",
+            InstanceProtocol="HTTP"
+        ),
+    ],
+    HealthCheck=elb.HealthCheck(
+        Target="HTTP:3000/",
+        HealthyThreshold="5",
+        UnhealthyThreshold="2",
+        Interval="20",
+        Timeout="15",
+    ),
+	#elb에서 ec2 제거 시점에 소멸정책
+    ConnectionDrainingPolicy=elb.ConnectionDrainingPolicy(
+        Enabled=True,
+        Timeout=10,
+    ),
+	#모든 인스턴스에 분산
+    CrossZone=True,
+    Subnets=Ref("PublicSubnet"),
+    SecurityGroups=[Ref("LoadBalancerSecurityGroup")],
 ))
 
 ud = Base64(Join('\n', [
@@ -101,6 +192,8 @@ t.add_resource(InstanceProfile(
     Roles=[Ref("Role")]
 ))
 
+#아래 instance 생성 및 관련 부분 제거
+...
 t.add_resource(ec2.Instance(
     "instance",
 	ImageId="ami-0e4a253fb5f082688",
@@ -122,6 +215,39 @@ t.add_output(Output(
     Description="Application endpoint",
     Value=Join("", [
         "http://", GetAtt("instance", "PublicDnsName"),
+        ":", ApplicationPort
+    ]),
+))
+'''
+
+#생성되는 ec2 인스턴스의 이미지 선언
+t.add_resource(LaunchConfiguration(
+    "LaunchConfiguration",
+    UserData=ud,
+	ImageId="ami-0e4a253fb5f082688",
+    KeyName=Ref("KeyPair"),
+    SecurityGroups=[Ref("SecurityGroup")],
+    InstanceType=Ref("InstanceType"),
+    IamInstanceProfile=Ref("InstanceProfile"),
+))
+
+#AutoScalingGroup 선언 및 인스턴스 갯수 min/max 결정, AutoScalingGroup 과 elb 연결
+t.add_resource(AutoScalingGroup(
+    "AutoscalingGroup",
+    DesiredCapacity=Ref("ScaleCapacity"),
+    LaunchConfigurationName=Ref("LaunchConfiguration"),
+    MinSize=2,
+    MaxSize=5,
+    LoadBalancerNames=[Ref("LoadBalancer")],
+    VPCZoneIdentifier=Ref("PublicSubnet"),
+))
+
+#elb를 노출
+t.add_output(Output(
+    "WebUrl",
+    Description="Application endpoint",
+    Value=Join("", [
+        "http://", GetAtt("LoadBalancer", "DNSName"),
         ":", ApplicationPort
     ]),
 ))
