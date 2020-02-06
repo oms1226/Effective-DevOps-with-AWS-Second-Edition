@@ -122,7 +122,7 @@ t.add_resource(LaunchConfiguration(
         "         --region ",
         Ref('AWS::Region'),
         "\n"])),
-    ImageId='ami-04351e12',
+    ImageId='ami-0e4a253fb5f082688',
     KeyName=Ref("KeyPair"),
     SecurityGroups=[Ref("SecurityGroup")],
     IamInstanceProfile=Ref('EC2InstanceProfile'),
@@ -155,7 +155,7 @@ states = {
 }
 
 for reservation in {"CPU", "Memory"}:
-    for state, value in states.iteritems():
+    for state, value in states.items():
         t.add_resource(Alarm(
             "{}ReservationToo{}".format(reservation, state),
             AlarmDescription="Alarm if {} reservation too {}".format(
